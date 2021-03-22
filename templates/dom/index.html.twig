@@ -1,0 +1,43 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Dom index{% endblock %}
+
+{% block body %}
+    <h1>Dom index</h1>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Type</th>
+                <th>Width</th>
+                <th>Height</th>
+                <th>File_type</th>
+                <th>File_size</th>
+                <th>actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for dom in doms %}
+            <tr>
+                <td>{{ dom.id }}</td>
+                <td>{{ dom.type }}</td>
+                <td>{{ dom.width }}</td>
+                <td>{{ dom.height }}</td>
+                <td>{{ dom.fileType }}</td>
+                <td>{{ dom.fileSize }}</td>
+                <td>
+                    <a href="{{ path('dom_show', {'id': dom.id}) }}">show</a>
+                    <a href="{{ path('dom_edit', {'id': dom.id}) }}">edit</a>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="7">no records found</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{{ path('dom_new') }}">Create new</a>
+{% endblock %}

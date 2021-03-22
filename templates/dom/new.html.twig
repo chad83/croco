@@ -1,0 +1,11 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}New Dom{% endblock %}
+
+{% block body %}
+    <h1>Create new Dom</h1>
+
+    {{ include('dom/_form.html.twig') }}
+
+    <a href="{{ path('dom_index') }}">back to list</a>
+{% endblock %}

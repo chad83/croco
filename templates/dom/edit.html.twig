@@ -1,0 +1,13 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Edit Dom{% endblock %}
+
+{% block body %}
+    <h1>Edit Dom</h1>
+
+    {{ include('dom/_form.html.twig', {'button_label': 'Update'}) }}
+
+    <a href="{{ path('dom_index') }}">back to list</a>
+
+    {{ include('dom/_delete_form.html.twig') }}
+{% endblock %}
