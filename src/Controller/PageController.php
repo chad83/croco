@@ -20,19 +20,20 @@ use App\Service\Crawler;
 #[Route('/page')]
 class PageController extends AbstractController
 {
-
     #[Route('/generatetree', name: 'generate_tree')]
     public function generateSiteTree(MessageBusInterface $bus)
     {
         $site = 'https://adashofluster.com/';
 
-        $normalizer = new \URL\Normalizer($site);
+        $normalizer = new \URL\Normalizer(trim($site));
         $site = $normalizer->normalize();
 
+        // Save the job description to the db.
         $entityManager = $this->getDoctrine()->getManager();
         $job = new Job();
         $job->setSite($site);
         $job->setDateStarted(new \DateTime());
+        $job->setStatus('running');
         $entityManager->persist($job);
         $entityManager->flush();
 

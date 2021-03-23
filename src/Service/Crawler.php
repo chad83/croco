@@ -34,8 +34,7 @@ class Crawler
 
     public function __construct(ObjectManager $entityManager, Job $job, array $filteredLinkPrefixes, array $filteredLinkSuffixes)
     {
-        // TODO: Maybe don't use cleanWebPath()
-        $this->siteRoot = $this->cleanWebPath($job->getSite());
+        $this->siteRoot = $job->getSite();
 
 //        $this->pages[$this->siteRoot] = [];
         $this->pages = [];
@@ -56,8 +55,10 @@ class Crawler
      */
     private function cleanWebPath(string $webPage) : string
     {
-        $webPage = trim($webPage);
-        $webPage = trim($webPage, '/');
+        // Filter out anchor links so they default to the page that includes them.
+        if(str_contains($webPage, '#')){
+            $webPage = substr($webPage, 0, strrpos($webPage, '#'));
+        }
 
         return $webPage;
     }
@@ -174,7 +175,7 @@ class Crawler
         return false;
     }
 
-    public function getPages(string $webPage, bool $recurse = true, string $parent = '') : array|false
+    public function getPages(string $webPage, bool $recurse = true, string $parent = '')
     {
 //        $normalizer = new \URL\Normalizer($webPage);
 //        $webPage = $normalizer->normalize();
@@ -184,6 +185,8 @@ class Crawler
 //        } else {
 //            $webPage = UriResolver::resolve($webPage, $parent);
 //        }
+
+        $webPage = $this->cleanWebPath($webPage);
 
         // Push the current page to the list of pages.
         if(!$this->isCrawled($webPage)) {
@@ -216,7 +219,7 @@ class Crawler
         $fileLinks = [];
         foreach ($links as $domElement) {
 
-            $linkedPage = UriResolver::resolve($domElement[0], $webPage);
+            $linkedPage = UriResolver::resolve($this->cleanWebPath($domElement[0]), $webPage);
 
             // If it's not a duplicated link.
             if(!$this->isCrawled($linkedPage)) {
@@ -246,14 +249,12 @@ class Crawler
 //            ->filterXpath('//img')
 //            ->extract(array('src', 'alt', 'height', 'width', '_text'));
 
-
-        $this->savePages($this->pages);
-        return $this->pages;
+//        $this->savePages($this->pages);
+//        return $this->pages;
     }
 
     private function savePages(array $pages)
     {
-
         foreach($pages as $uri => $pageData){
             $page = new Page();
             $page->setJob($this->job);
@@ -271,5 +272,6 @@ class Crawler
     public function crawl()
     {
         $this->getPages($this->siteRoot, true);
+        $this->savePages($this->pages);
     }
 }
