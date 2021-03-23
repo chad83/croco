@@ -26,10 +26,11 @@ class PageController extends AbstractController
         $normalizer = new \URL\Normalizer($site);
         $site = $normalizer->normalize();
 
+
         $crawler = new Crawler($site,
             $this->getParameter('app.filtered_link_prefixes'),
             $this->getParameter('app.filtered_link_suffixes'));
-        $sitePages = $crawler->getPages($site);
+        $sitePages = $crawler->getPages($site, true);
 
         echo '<pre>';
         print_r($sitePages);

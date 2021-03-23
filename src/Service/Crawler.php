@@ -4,8 +4,12 @@
 namespace App\Service;
 
 use Symfony\Component\DomCrawler\Crawler as DomCrawler;
-use Symfony\Component\CssSelector\CssSelectorConverter;
+use Symfony\Component\DomCrawler\UriResolver;
 use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
 class Crawler
 {
@@ -117,10 +121,22 @@ class Crawler
     private function addToPages(string $linkedPage, array $linkElement)
     {
         $this->pages[$linkedPage] = [
-            'href' => $this->buildAbsolutePath($linkedPage),
+            'href' => $linkedPage,
             'alt' => $linkElement[1],
             'text' => $linkElement[2]
         ];
+    }
+
+    private function setPageStatus(string $linkedPage, int $status)
+    {
+        $this->pages[$linkedPage]['status'] = $status;
+    }
+
+    private function updatePageParent(string $page, string $parent)
+    {
+        if(!empty($parent)) {
+            $this->pages[$page]['parents'][] = $parent;
+        }
     }
 
     /**
@@ -138,30 +154,41 @@ class Crawler
         return false;
     }
 
-    public function getPages(string $webPage) : array|false
+    public function getPages(string $webPage, bool $recurse = true, string $parent = '') : array|false
     {
-        $normalizer = new \URL\Normalizer($webPage);
-        $webPage = $normalizer->normalize();
+//        $normalizer = new \URL\Normalizer($webPage);
+//        $webPage = $normalizer->normalize();
+
+//        if(empty($parent)) {
+//            $webPage = UriResolver::resolve($webPage, $this->siteRoot);
+//        } else {
+//            $webPage = UriResolver::resolve($webPage, $parent);
+//        }
 
         // Push the current page to the list of pages.
         if(!$this->isCrawled($webPage)) {
             $this->pages[$webPage] = [];
         }
 
+        // Get the status and content of the current page.
+        try {
+            $response = $this->httpClient->request('GET', $webPage);
+            $responseStatus = $response->getStatusCode();
+            $this->setPageStatus($webPage, $responseStatus);
+            $this->updatePageParent($webPage, $parent);
 
-
-
-//        $webPage = $this->cleanWebPath($webPage);
-
-
-        $response = $this->httpClient->request('GET', $webPage);
-        if($response->getStatusCode() === 200) {
-            $html = $response->getContent();
-        } else {
+            if($responseStatus === 200) {
+                $html = $response->getContent(false);
+            } else {
+                return false;
+            }
+        } catch (TransportExceptionInterface | ClientExceptionInterface | RedirectionExceptionInterface | ServerExceptionInterface $e) {
             return false;
         }
 
-        $crawler = new DomCrawler($html);
+
+
+//        $crawler = new DomCrawler($html);
 //        print_r($crawler);
 
 //        $crawler = $crawler->filter('img');
@@ -179,9 +206,11 @@ class Crawler
         // Check the generated links.
         foreach ($crawler as $domElement) {
             // Check if the page is pointing back to itself.
-            $normalizer = new \URL\Normalizer($domElement[0]);
-            $linkedPage = $normalizer->normalize();
-            $linkedPage = $this->buildAbsolutePath($linkedPage);
+//            $normalizer = new \URL\Normalizer($domElement[0]);
+//            $linkedPage = $normalizer->normalize();
+
+            $linkedPage = UriResolver::resolve($domElement[0], $webPage);
+//            $linkedPage = $this->buildAbsolutePath($linkedPage);
 //            $linkedPage = $this->cleanWebPath($domElement[0]);
 
             // Skip re-saving the site-root.
@@ -203,9 +232,9 @@ class Crawler
                 else {
                     $this->addToPages($linkedPage, $domElement);
 
-//                echo $linkedPage . ', ';
-
-                    $this->getPages($this->buildAbsolutePath($linkedPage));
+                    if($recurse) {
+                        $this->getPages($linkedPage, true, $webPage);
+                    }
                 }
             }
         }
