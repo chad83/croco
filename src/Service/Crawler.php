@@ -52,7 +52,7 @@ class Crawler
      */
     private function isOutgoingLink(string $path) : bool
     {
-        $path = strtolower(trim($path));
+//        $path = strtolower(trim($path));
 
         // Check if the path starts with web paths that is not an absolute link to this website.
         if((substr($path, 0, 4) === 'http' || substr($path, 0, 3) === 'www') &&
@@ -72,7 +72,7 @@ class Crawler
      */
     private function isUtilityLink(string $path) : bool
     {
-        $path = strtolower(trim($path));
+//        $path = strtolower(trim($path));
 
         foreach($this->filteredLinkPrefixes as $prefix){
             if(str_contains($path, $prefix)){
@@ -80,14 +80,19 @@ class Crawler
             }
         }
 
+        if($path === '#' || $path === '/' || empty($path)){
+            return true;
+        }
+
+        return false;
+    }
+
+    private function isFileLink(string $path) : bool
+    {
         foreach($this->filteredLinkSuffixes as $suffix){
             if(str_contains($path, $suffix)){
                 return true;
             }
-        }
-
-        if($path === '#'){
-            return true;
         }
 
         return false;
@@ -101,10 +106,11 @@ class Crawler
      */
     private function buildAbsolutePath(string $linkedPage) : string
     {
-        if(substr($linkedPage, 0, 4) === 'http' || substr($linkedPage, 0, 3) === 'www'){
+        if(substr($linkedPage, 0, 5) === 'http:' || substr($linkedPage, 0, 6) === 'https:' || substr($linkedPage, 0, 4) === 'www.'){
             return $linkedPage;
         } else {
-            return $this->siteRoot . '/' . $linkedPage;
+            $normalizer = new \URL\Normalizer($this->siteRoot . '/' . $linkedPage);
+            return $normalizer->normalize();
         }
     }
 
@@ -134,7 +140,18 @@ class Crawler
 
     public function getPages(string $webPage) : array|false
     {
-        $webPage = $this->cleanWebPath($webPage);
+        $normalizer = new \URL\Normalizer($webPage);
+        $webPage = $normalizer->normalize();
+
+        // Push the current page to the list of pages.
+        if(!$this->isCrawled($webPage)) {
+            $this->pages[$webPage] = [];
+        }
+
+
+
+
+//        $webPage = $this->cleanWebPath($webPage);
 
 
         $response = $this->httpClient->request('GET', $webPage);
@@ -153,33 +170,43 @@ class Crawler
 //            ->filterXpath('//img')
 //            ->extract(array('src', 'alt', 'height', 'width', '_text'));
 
+        // Create a crawler instance to check for links.
+        $crawler = new DomCrawler($html);
         $crawler = $crawler
             ->filterXpath('//a')
             ->extract(array('href', 'alt', '_text'));
 
-        $currentPageElements = [];
+        // Check the generated links.
         foreach ($crawler as $domElement) {
             // Check if the page is pointing back to itself.
-            $linkedPage = $this->cleanWebPath($domElement[0]);
+            $normalizer = new \URL\Normalizer($domElement[0]);
+            $linkedPage = $normalizer->normalize();
+            $linkedPage = $this->buildAbsolutePath($linkedPage);
+//            $linkedPage = $this->cleanWebPath($domElement[0]);
 
             // Skip re-saving the site-root.
-            if($linkedPage === $this->siteRoot){
-                // Tree behavior.
-            }
-            // Check if this is an outside link.
-            else if($this->isOutgoingLink($linkedPage)){
-                // Todo: Create outgoing links handler.
-            }
-            // Check if this is a utility link.
-            else if($this->isUtilityLink($linkedPage)){
-                // Utility-link behavior.
-            }
-            // Save the page if it hasn't been saved already.
-            else if(!$this->isCrawled($linkedPage)) {
-                $this->addToPages($linkedPage, $domElement);
+//            if($linkedPage === $this->siteRoot){
+//                // Tree behavior.
+//            }
 
-//                $this->buildAbsolutePath($linkedPage);
-//                $this->getPages($this->buildAbsolutePath($linkedPage));
+            // If it's not a duplicated link.
+            if(!$this->isCrawled($linkedPage)) {
+                // Check if this is an outside link.
+                if ($this->isOutgoingLink($linkedPage)) {
+                    // Todo: Create outgoing links handler.
+                } // Check if this is a utility link.
+                else if ($this->isUtilityLink($linkedPage)) {
+                    // Utility-link behavior.
+                } else if ($this->isFileLink($linkedPage)) {
+                    // File-link behavior.
+                } // Save the page if it hasn't been saved already.
+                else {
+                    $this->addToPages($linkedPage, $domElement);
+
+//                echo $linkedPage . ', ';
+
+                    $this->getPages($this->buildAbsolutePath($linkedPage));
+                }
             }
         }
 

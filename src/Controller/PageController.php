@@ -21,9 +21,12 @@ class PageController extends AbstractController
     #[Route('/generatetree', name: 'generate_tree')]
     public function generateSiteTree()
     {
-        $site = 'https://www.chadiwehbe.com';
+        $site = 'https://adashofluster.com/';
 
-        $crawler = new Crawler('https://www.chadiwehbe.com',
+        $normalizer = new \URL\Normalizer($site);
+        $site = $normalizer->normalize();
+
+        $crawler = new Crawler($site,
             $this->getParameter('app.filtered_link_prefixes'),
             $this->getParameter('app.filtered_link_suffixes'));
         $sitePages = $crawler->getPages($site);
