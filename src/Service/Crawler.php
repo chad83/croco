@@ -115,21 +115,26 @@ class Crawler
         return false;
     }
 
+    private function getFileExtension(string $path) : string
+    {
+        return substr($path, strrpos($path ,'.'));
+    }
+
     /**
      * Builds an absolute path from a relative one.
      *
      * @param string $linkedPage
      * @return string
      */
-    private function buildAbsolutePath(string $linkedPage) : string
-    {
-        if(substr($linkedPage, 0, 5) === 'http:' || substr($linkedPage, 0, 6) === 'https:' || substr($linkedPage, 0, 4) === 'www.'){
-            return $linkedPage;
-        } else {
-            $normalizer = new \URL\Normalizer($this->siteRoot . '/' . $linkedPage);
-            return $normalizer->normalize();
-        }
-    }
+//    private function buildAbsolutePath(string $linkedPage) : string
+//    {
+//        if(substr($linkedPage, 0, 5) === 'http:' || substr($linkedPage, 0, 6) === 'https:' || substr($linkedPage, 0, 4) === 'www.'){
+//            return $linkedPage;
+//        } else {
+//            $normalizer = new \URL\Normalizer($this->siteRoot . '/' . $linkedPage);
+//            return $normalizer->normalize();
+//        }
+//    }
 
     private function addToPages(string $linkedPage, array $linkElement)
     {
@@ -200,37 +205,17 @@ class Crawler
             return false;
         }
 
-
-
-//        $crawler = new DomCrawler($html);
-//        print_r($crawler);
-
-//        $crawler = $crawler->filter('img');
-
-//        $crawler = $crawler
-//            ->filterXpath('//img')
-//            ->extract(array('src', 'alt', 'height', 'width', '_text'));
-
         // Create a crawler instance to check for links.
         $crawler = new DomCrawler($html);
-        $crawler = $crawler
+        $links = $crawler
             ->filterXpath('//a')
             ->extract(array('href', 'alt', '_text'));
 
         // Check the generated links.
-        foreach ($crawler as $domElement) {
-            // Check if the page is pointing back to itself.
-//            $normalizer = new \URL\Normalizer($domElement[0]);
-//            $linkedPage = $normalizer->normalize();
+        $fileLinks = [];
+        foreach ($links as $domElement) {
 
             $linkedPage = UriResolver::resolve($domElement[0], $webPage);
-//            $linkedPage = $this->buildAbsolutePath($linkedPage);
-//            $linkedPage = $this->cleanWebPath($domElement[0]);
-
-            // Skip re-saving the site-root.
-//            if($linkedPage === $this->siteRoot){
-//                // Tree behavior.
-//            }
 
             // If it's not a duplicated link.
             if(!$this->isCrawled($linkedPage)) {
@@ -241,7 +226,10 @@ class Crawler
                 else if ($this->isUtilityLink($linkedPage)) {
                     // Utility-link behavior.
                 } else if ($this->isFileLink($linkedPage)) {
-                    // File-link behavior.
+                    $fileLinks[] = [
+                        'type' => 'file',
+                        'filetype' => $this->getFileExtension($linkedPage)
+                    ];
                 } // Save the page if it hasn't been saved already.
                 else {
                     $this->addToPages($linkedPage, $domElement);
@@ -252,6 +240,11 @@ class Crawler
                 }
             }
         }
+
+//        $images = $crawler
+//            ->filterXpath('//img')
+//            ->extract(array('src', 'alt', 'height', 'width', '_text'));
+
 
         $this->savePages($this->pages);
         return $this->pages;
