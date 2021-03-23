@@ -3,6 +3,8 @@
 
 namespace App\Service;
 
+use App\Entity\Job;
+use Doctrine\Persistence\ObjectManager;
 use Symfony\Component\DomCrawler\Crawler as DomCrawler;
 use Symfony\Component\DomCrawler\UriResolver;
 use Symfony\Component\HttpClient\HttpClient;
@@ -10,6 +12,7 @@ use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use App\Entity\Page;
 
 class Crawler
 {
@@ -20,8 +23,16 @@ class Crawler
 
     private array $filteredLinkPrefixes;
     private array $filteredLinkSuffixes;
+    /**
+     * @var ObjectManager
+     */
+    private ObjectManager $entityManager;
+    /**
+     * @var Job
+     */
+    private Job $job;
 
-    public function __construct(string $siteRoot, array $filteredLinkPrefixes, array $filteredLinkSuffixes)
+    public function __construct(ObjectManager $entityManager, Job $job, string $siteRoot, array $filteredLinkPrefixes, array $filteredLinkSuffixes)
     {
         $this->siteRoot = $this->cleanWebPath($siteRoot);
 
@@ -32,6 +43,8 @@ class Crawler
 
         $this->filteredLinkPrefixes = $filteredLinkPrefixes;
         $this->filteredLinkSuffixes = $filteredLinkSuffixes;
+        $this->entityManager = $entityManager;
+        $this->job = $job;
     }
 
     /**
@@ -123,7 +136,8 @@ class Crawler
         $this->pages[$linkedPage] = [
             'href' => $linkedPage,
             'alt' => $linkElement[1],
-            'text' => $linkElement[2]
+            'text' => $linkElement[2],
+            'status' => null,
         ];
     }
 
@@ -239,6 +253,24 @@ class Crawler
             }
         }
 
+        $this->savePages($this->pages);
         return $this->pages;
+    }
+
+    private function savePages(array $pages)
+    {
+
+        foreach($pages as $uri => $pageData){
+            $page = new Page();
+            $page->setJob($this->job);
+            $page->setPath($uri);
+            $page->setStatusCode($pageData['status']);
+            $page->setTitle('Ergonomic and stylish!');
+
+            // tell Doctrine you want to (eventually) save the Product (no queries yet)
+            $this->entityManager->persist($page);
+        }
+
+        $this->entityManager->flush();
     }
 }

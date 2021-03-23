@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\Job;
 use App\Entity\Page;
 use App\Form\PageType;
 use App\Repository\PageRepository;
@@ -26,11 +27,20 @@ class PageController extends AbstractController
         $normalizer = new \URL\Normalizer($site);
         $site = $normalizer->normalize();
 
+        $entityManager = $this->getDoctrine()->getManager();
+        $job = new Job();
+        $job->setSite($site);
+        $job->setDateStarted(new \DateTime());
+        $entityManager->persist($job);
+        $entityManager->flush();
 
-        $crawler = new Crawler($site,
+        $crawler = new Crawler(
+            $entityManager,
+            $job,
+            $site,
             $this->getParameter('app.filtered_link_prefixes'),
             $this->getParameter('app.filtered_link_suffixes'));
-        $sitePages = $crawler->getPages($site, true);
+        $sitePages = $crawler->getPages($site, false);
 
         echo '<pre>';
         print_r($sitePages);
