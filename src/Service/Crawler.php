@@ -32,9 +32,10 @@ class Crawler
      */
     private Job $job;
 
-    public function __construct(ObjectManager $entityManager, Job $job, string $siteRoot, array $filteredLinkPrefixes, array $filteredLinkSuffixes)
+    public function __construct(ObjectManager $entityManager, Job $job, array $filteredLinkPrefixes, array $filteredLinkSuffixes)
     {
-        $this->siteRoot = $this->cleanWebPath($siteRoot);
+        // TODO: Maybe don't use cleanWebPath()
+        $this->siteRoot = $this->cleanWebPath($job->getSite());
 
 //        $this->pages[$this->siteRoot] = [];
         $this->pages = [];
@@ -265,5 +266,10 @@ class Crawler
         }
 
         $this->entityManager->flush();
+    }
+
+    public function crawl()
+    {
+        $this->getPages($this->siteRoot, true);
     }
 }

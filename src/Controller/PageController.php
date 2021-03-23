@@ -5,11 +5,13 @@ namespace App\Controller;
 use App\Entity\Job;
 use App\Entity\Page;
 use App\Form\PageType;
+use App\Message\NewJobMessage;
 use App\Repository\PageRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Annotation\Route;
 
 use App\Service\Crawler;
@@ -20,7 +22,7 @@ class PageController extends AbstractController
 {
 
     #[Route('/generatetree', name: 'generate_tree')]
-    public function generateSiteTree()
+    public function generateSiteTree(MessageBusInterface $bus)
     {
         $site = 'https://adashofluster.com/';
 
@@ -34,19 +36,15 @@ class PageController extends AbstractController
         $entityManager->persist($job);
         $entityManager->flush();
 
-        $crawler = new Crawler(
-            $entityManager,
-            $job,
-            $site,
-            $this->getParameter('app.filtered_link_prefixes'),
-            $this->getParameter('app.filtered_link_suffixes'));
-        $sitePages = $crawler->getPages($site, false);
+        $bus->dispatch(
+            new NewJobMessage(
+                $job->getId(),
+                $this->getParameter('app.filtered_link_prefixes'),
+                $this->getParameter('app.filtered_link_suffixes')
+            )
+        );
 
-        echo '<pre>';
-        print_r($sitePages);
-        echo '</pre>';
-
-        return new JsonResponse($sitePages);
+        return new JsonResponse(["jobId" => $job->getId()]);
     }
 
     #[Route('/', name: 'page_index', methods: ['GET'])]
