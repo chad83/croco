@@ -6,13 +6,39 @@ use App\Entity\Page;
 use App\Form\PageType;
 use App\Repository\PageRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
+use App\Service\Crawler;
+
+
 #[Route('/page')]
 class PageController extends AbstractController
 {
+
+    #[Route('/generatetree', name: 'generate_tree')]
+    public function generateSiteTree()
+    {
+        $site = 'https://www.fusonic.net/de/';
+
+        // Remove the trailing slash.
+        if ($site[strlen($site) - 1] === '/'){
+            $site = substr($site, 0, strlen($site) - 1);
+        }
+
+        $crawler = new Crawler();
+
+        $sitePages = $crawler->getPages($site);
+
+        echo '<pre>';
+        print_r($sitePages);
+        echo '</pre>';
+
+        return new JsonResponse($sitePages);
+    }
+
     #[Route('/', name: 'page_index', methods: ['GET'])]
     public function index(PageRepository $pageRepository): Response
     {
@@ -79,4 +105,6 @@ class PageController extends AbstractController
 
         return $this->redirectToRoute('page_index');
     }
+
+
 }

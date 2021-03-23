@@ -6,6 +6,7 @@ use App\Entity\Job;
 use App\Form\JobType;
 use App\Repository\JobRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -13,6 +14,15 @@ use Symfony\Component\Routing\Annotation\Route;
 #[Route('/job')]
 class JobController extends AbstractController
 {
+
+//    #[Route('/run', name: 'api_job_new', methods: ['POST'])]
+    public function newJob(): JsonResponse
+    {
+        $request = Request::createFromGlobals();
+        $test = $request->toArray();
+        return new JsonResponse([$test['site']]);
+    }
+
     #[Route('/', name: 'job_index', methods: ['GET'])]
     public function index(JobRepository $jobRepository): Response
     {

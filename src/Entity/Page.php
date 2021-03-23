@@ -45,6 +45,11 @@ class Page
      */
     private $job;
 
+    /**
+     * @ORM\Column(type="string", length=255)
+     */
+    private $path;
+
     public function __construct()
     {
         $this->link = new ArrayCollection();
@@ -128,6 +133,18 @@ class Page
     public function setJob(?Job $job): self
     {
         $this->job = $job;
+
+        return $this;
+    }
+
+    public function getPath(): ?string
+    {
+        return $this->path;
+    }
+
+    public function setPath(string $path): self
+    {
+        $this->path = $path;
 
         return $this;
     }

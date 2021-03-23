@@ -1,3 +1,5 @@
-#index:
-#    path: /
-#    controller: App\Controller\DefaultController::index
+# Adding a new job.
+api_job_new:
+  path: /run
+  controller: App\Controller\JobController::newJob
+  methods: POST
