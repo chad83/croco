@@ -21,15 +21,11 @@ class PageController extends AbstractController
     #[Route('/generatetree', name: 'generate_tree')]
     public function generateSiteTree()
     {
-        $site = 'https://www.fusonic.net/de/';
+        $site = 'https://www.chadiwehbe.com';
 
-        // Remove the trailing slash.
-        if ($site[strlen($site) - 1] === '/'){
-            $site = substr($site, 0, strlen($site) - 1);
-        }
-
-        $crawler = new Crawler();
-
+        $crawler = new Crawler('https://www.chadiwehbe.com',
+            $this->getParameter('app.filtered_link_prefixes'),
+            $this->getParameter('app.filtered_link_suffixes'));
         $sitePages = $crawler->getPages($site);
 
         echo '<pre>';
