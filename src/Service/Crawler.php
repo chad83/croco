@@ -17,6 +17,7 @@ use App\Entity\Page;
 
 use Symfony\Component\HttpClient\CachingHttpClient;
 use Symfony\Component\HttpKernel\HttpCache\Store;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class Crawler
 {
@@ -24,12 +25,13 @@ class Crawler
     private array $pages;
     private array $fileLinks;
 
-    private \Symfony\Contracts\HttpClient\HttpClientInterface $httpClient;
+    private ?\Symfony\Contracts\HttpClient\HttpClientInterface $httpClient;
 
     private array $filteredLinkPrefixes;
     private array $filteredLinkSuffixes;
     private ObjectManager $entityManager;
     private Job $job;
+    private string $cacheDir;
 
     public function __construct(ObjectManager $entityManager, Job $job, array $filteredLinkPrefixes, array $filteredLinkSuffixes, string $cacheDir)
     {
@@ -39,14 +41,31 @@ class Crawler
         $this->fileLinks = [];
 
         // Cache settings setup.
-        $store = new Store($cacheDir);
-        $this->httpClient = HttpClient::create();
-        $this->httpClient = new CachingHttpClient($this->httpClient, $store);
+        $this->httpClient = null;
+        $this->cacheDir = $cacheDir;
 
         $this->filteredLinkPrefixes = $filteredLinkPrefixes;
         $this->filteredLinkSuffixes = $filteredLinkSuffixes;
         $this->entityManager = $entityManager;
         $this->job = $job;
+
+    }
+
+    /**
+     * Builds an HttpClientInterface for caching if none has been created yet.
+     * (workaround to allow tests to work).
+     *
+     * @return HttpClientInterface
+     */
+    private function getHttpClient(): HttpClientInterface
+    {
+        if (empty($this->httpClient)) {
+            $store = new Store($this->cacheDir);
+            $this->httpClient = HttpClient::create();
+            $this->httpClient = new CachingHttpClient($this->httpClient, $store);
+        }
+
+        return $this->httpClient;
     }
 
     /**
@@ -55,7 +74,7 @@ class Crawler
      * @param string $webPage
      * @return string
      */
-    private function cleanWebPath(string $webPage) : string
+    public function cleanWebPath(string $webPage): string
     {
         // Filter out anchor links so they default to the page that includes them.
         if(str_contains($webPage, '#')){
@@ -71,7 +90,7 @@ class Crawler
      * @param string $path
      * @return bool
      */
-    private function isOutgoingLink(string $path) : bool
+    private function isOutgoingLink(string $path): bool
     {
 //        $path = strtolower(trim($path));
 
@@ -91,7 +110,7 @@ class Crawler
      * @param string $path
      * @return bool
      */
-    private function isUtilityLink(string $path) : bool
+    private function isUtilityLink(string $path): bool
     {
 //        $path = strtolower(trim($path));
 
@@ -114,7 +133,7 @@ class Crawler
      * @param string $path
      * @return bool
      */
-    private function isFileLink(string $path) : bool
+    private function isFileLink(string $path): bool
     {
         foreach($this->filteredLinkSuffixes as $suffix){
             if(str_contains($path, $suffix)){
@@ -131,7 +150,7 @@ class Crawler
      * @param string $path
      * @return string
      */
-    private function getFileExtension(string $path) : string
+    public function getFileExtension(string $path): string
     {
         return substr($path, strrpos($path ,'.'));
     }
@@ -142,7 +161,7 @@ class Crawler
      * @param string $linkedPage
      * @return string
      */
-//    private function buildAbsolutePath(string $linkedPage) : string
+//    private function buildAbsolutePath(string $linkedPage): string
 //    {
 //        if(substr($linkedPage, 0, 5) === 'http:' || substr($linkedPage, 0, 6) === 'https:' || substr($linkedPage, 0, 4) === 'www.'){
 //            return $linkedPage;
@@ -188,7 +207,7 @@ class Crawler
      * @param string $pagePath
      * @return bool
      */
-    private function isCrawled(string $pagePath) : bool
+    private function isCrawled(string $pagePath): bool
     {
         if(array_key_exists($pagePath, $this->pages)){
             return true;
@@ -216,7 +235,7 @@ class Crawler
 
         // Get the status and content of the current page.
         try {
-            $response = $this->httpClient->request('GET', $webPage);
+            $response = $this->getHttpClient()->request('GET', $webPage);
             $responseStatus = $response->getStatusCode();
             $this->setPageStatus($webPage, $responseStatus);
             $this->updatePageParent($webPage, $parent);
@@ -272,7 +291,7 @@ class Crawler
                 else {
                     $this->addToPages($linkedPage,
                         $domElement,
-                        isset($title[0]) ? $title[0] : null
+                        isset($title[0]) ? $title[0]: null
                     );
 
                     if($recurse) {
