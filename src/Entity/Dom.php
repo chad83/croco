@@ -52,6 +52,16 @@ class Dom
     private $parent_url;
 
     /**
+     * @ORM\Column(type="string", length=255, nullable=true)
+     */
+    private $file_name;
+
+    /**
+     * @ORM\Column(type="string", length=255, nullable=true)
+     */
+    private $file_path;
+
+    /**
      * @ORM\ManyToOne(targetEntity=Job::class, inversedBy="pages")
      * @ORM\JoinColumn(nullable=false)
      */
@@ -127,14 +137,38 @@ class Dom
         return $this;
     }
 
-    public function getParentUrl(): ?int
+    public function getParentUrl(): ?string
     {
         return $this->parent_url;
     }
 
-    public function setParentUrl(?int $parent_url): self
+    public function setParentUrl(?string $parent_url): self
     {
         $this->parent_url = $parent_url;
+
+        return $this;
+    }
+
+    public function getFileName(): ?string
+    {
+        return $this->file_name;
+    }
+
+    public function setFileName(?string $file_name): self
+    {
+        $this->file_name = $file_name;
+
+        return $this;
+    }
+
+    public function getFilePath(): ?string
+    {
+        return $this->file_path;
+    }
+
+    public function setFilePath(?string $file_path): self
+    {
+        $this->file_path = $file_path;
 
         return $this;
     }

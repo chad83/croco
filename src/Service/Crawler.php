@@ -3,6 +3,7 @@
 
 namespace App\Service;
 
+use App\Entity\Dom;
 use App\Entity\Job;
 use Doctrine\Persistence\ObjectManager;
 use Symfony\Component\DomCrawler\Crawler as DomCrawler;
@@ -18,6 +19,7 @@ class Crawler
 {
     private string $siteRoot;
     private array $pages;
+    private array $fileLinks;
 
     private \Symfony\Contracts\HttpClient\HttpClientInterface $httpClient;
 
@@ -38,6 +40,7 @@ class Crawler
 
 //        $this->pages[$this->siteRoot] = [];
         $this->pages = [];
+        $this->fileLinks = [];
 
         $this->httpClient = HttpClient::create();
 
@@ -216,7 +219,6 @@ class Crawler
             ->extract(array('href', 'alt', '_text'));
 
         // Check the generated links.
-        $fileLinks = [];
         foreach ($links as $domElement) {
 
             $linkedPage = UriResolver::resolve($this->cleanWebPath($domElement[0]), $webPage);
@@ -230,9 +232,13 @@ class Crawler
                 else if ($this->isUtilityLink($linkedPage)) {
                     // Utility-link behavior.
                 } else if ($this->isFileLink($linkedPage)) {
-                    $fileLinks[] = [
+                    $fileName = basename($linkedPage);
+                    $this->fileLinks[$fileName] = [
                         'type' => 'file',
-                        'filetype' => $this->getFileExtension($linkedPage)
+                        'parentUrl' => $webPage,
+                        'filePath' => $linkedPage,
+                        'fileName' => $fileName,
+                        'fileType' => $this->getFileExtension($linkedPage)
                     ];
                 } // Save the page if it hasn't been saved already.
                 else {
@@ -245,9 +251,23 @@ class Crawler
             }
         }
 
-//        $images = $crawler
-//            ->filterXpath('//img')
-//            ->extract(array('src', 'alt', 'height', 'width', '_text'));
+        // Crawl through any images in the page.
+        $pageImages = $crawler
+            ->filterXpath('//img')
+            ->extract(array('src', 'alt', 'height', 'width', '_text'));
+
+        foreach($pageImages as $image){
+            $src = trim($image[0]);
+            $fileName = basename($src);
+
+            $this->fileLinks[$fileName] = [
+                'type' => 'image',
+                'parentUrl' => $webPage,
+                'filePath' => $src,
+                'fileName' => $fileName,
+                'fileType' => $this->getFileExtension($src),
+            ];
+        }
 
 //        $this->savePages($this->pages);
 //        return $this->pages;
@@ -262,8 +282,24 @@ class Crawler
             $page->setStatusCode($pageData['status']);
             $page->setTitle('Ergonomic and stylish!');
 
-            // tell Doctrine you want to (eventually) save the Product (no queries yet)
             $this->entityManager->persist($page);
+        }
+
+        $this->entityManager->flush();
+    }
+
+    private function saveFileLinks(array $fileLinks)
+    {
+        foreach($fileLinks as $fileLink){
+            $dom = new Dom();
+            $dom->setJob($this->job)
+                ->setType($fileLink['type'])
+                ->setParentUrl($fileLink['parentUrl'])
+                ->setFileName($fileLink['fileName'])
+                ->setFilePath($fileLink['filePath'])
+                ->setFileType($fileLink['fileType']);
+
+            $this->entityManager->persist($dom);
         }
 
         $this->entityManager->flush();
@@ -273,5 +309,6 @@ class Crawler
     {
         $this->getPages($this->siteRoot, true);
         $this->savePages($this->pages);
+        $this->saveFileLinks($this->fileLinks);
     }
 }
