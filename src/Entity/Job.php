@@ -9,6 +9,8 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * @ORM\Entity(repositoryClass=JobRepository::class)
+ * @ORM\Table(indexes={@ORM\Index(columns={"status"})})
+ * @ORM\Table(indexes={@ORM\Index(columns={"site"})})
  */
 class Job
 {
@@ -44,9 +46,15 @@ class Job
      */
     private $pages;
 
+    /**
+     * @ORM\OneToMany(targetEntity=Dom::class, mappedBy="job")
+     */
+    private $doms;
+
     public function __construct()
     {
         $this->pages = new ArrayCollection();
+        $this->doms = new ArrayCollection();
     }
 
     public function __toString()
@@ -105,6 +113,14 @@ class Job
         $this->status = $status;
 
         return $this;
+    }
+
+    /**
+     * @return Collection|Dom[]
+     */
+    public function getDoms(): Collection
+    {
+        return $this->doms;
     }
 
     /**

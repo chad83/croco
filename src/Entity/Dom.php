@@ -9,6 +9,8 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * @ORM\Entity(repositoryClass=DomRepository::class)
+ * @ORM\Table(indexes={@ORM\Index(columns={"type"})})
+ * @ORM\Table(indexes={@ORM\Index(columns={"file_type"})})
  */
 class Dom
 {
@@ -45,9 +47,15 @@ class Dom
     private $file_size;
 
     /**
-     * @ORM\OneToMany(targetEntity=Page::class, mappedBy="dom")
+     * @ORM\Column(type="string", length=255, nullable=true)
      */
-    private $pages;
+    private $parent_url;
+
+    /**
+     * @ORM\ManyToOne(targetEntity=Job::class, inversedBy="pages")
+     * @ORM\JoinColumn(nullable=false)
+     */
+    private $job;
 
     public function __construct()
     {
@@ -119,32 +127,26 @@ class Dom
         return $this;
     }
 
-    /**
-     * @return Collection|Page[]
-     */
-    public function getPages(): Collection
+    public function getParentUrl(): ?int
     {
-        return $this->pages;
+        return $this->parent_url;
     }
 
-    public function addPage(Page $page): self
+    public function setParentUrl(?int $parent_url): self
     {
-        if (!$this->pages->contains($page)) {
-            $this->pages[] = $page;
-            $page->setDom($this);
-        }
+        $this->parent_url = $parent_url;
 
         return $this;
     }
 
-    public function removePage(Page $page): self
+    public function getJob(): ?Job
     {
-        if ($this->pages->removeElement($page)) {
-            // set the owning side to null (unless already changed)
-            if ($page->getDom() === $this) {
-                $page->setDom(null);
-            }
-        }
+        return $this->job;
+    }
+
+    public function setJob(?Job $job): self
+    {
+        $this->job = $job;
 
         return $this;
     }

@@ -9,6 +9,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 /**
  * @ORM\Entity(repositoryClass=PageRepository::class)
+ * @ORM\Table(indexes={@ORM\Index(columns={"status_code"})})
  */
 class Page
 {
@@ -23,11 +24,6 @@ class Page
      * @ORM\ManyToMany(targetEntity=Page::class)
      */
     private $link;
-
-    /**
-     * @ORM\ManyToOne(targetEntity=Dom::class, inversedBy="pages")
-     */
-    private $dom;
 
     /**
      * @ORM\Column(type="string", length=255)
@@ -85,18 +81,6 @@ class Page
     public function removeLink(self $link): self
     {
         $this->link->removeElement($link);
-
-        return $this;
-    }
-
-    public function getDom(): ?Dom
-    {
-        return $this->dom;
-    }
-
-    public function setDom(?Dom $dom): self
-    {
-        $this->dom = $dom;
 
         return $this;
     }
