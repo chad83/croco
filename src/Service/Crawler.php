@@ -60,9 +60,14 @@ class Crawler
     private function getHttpClient(): HttpClientInterface
     {
         if (empty($this->httpClient)) {
-            $store = new Store($this->cacheDir);
-            $this->httpClient = HttpClient::create();
-            $this->httpClient = new CachingHttpClient($this->httpClient, $store);
+            // Force the crawler not to use caching.
+            if($this->job->getShouldForceCrawl()){
+                $this->httpClient = HttpClient::create();
+            } else {
+                $store = new Store($this->cacheDir);
+                $this->httpClient = HttpClient::create();
+                $this->httpClient = new CachingHttpClient($this->httpClient, $store);
+            }
         }
 
         return $this->httpClient;

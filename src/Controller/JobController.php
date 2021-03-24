@@ -32,6 +32,11 @@ class JobController extends AbstractController
             return new JsonResponse(['message' => 'Site can\'t be empty'], 400);
         }
 
+        $forceCrawl = false;
+        if(isset($args['force_crawl']) && $args['force_crawl'] === true){
+            $forceCrawl = true;
+        }
+
         $site = $args['site'];
 
         $normalizer = new \URL\Normalizer(trim($site));
@@ -42,7 +47,8 @@ class JobController extends AbstractController
         $job = new Job();
         $job->setSite($site)
             ->setDateStarted(new \DateTime())
-            ->setStatus('pending');
+            ->setStatus('pending')
+            ->setShouldForceCrawl($forceCrawl);
         $entityManager->persist($job);
         $entityManager->flush();
 

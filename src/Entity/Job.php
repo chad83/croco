@@ -51,6 +51,11 @@ class Job
      */
     private $doms;
 
+    /**
+     * @ORM\Column(type="boolean", nullable=true)
+     */
+    private $should_force_crawl;
+
     public function __construct()
     {
         $this->pages = new ArrayCollection();
@@ -149,6 +154,18 @@ class Job
                 $page->setJob(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getShouldForceCrawl(): ?bool
+    {
+        return $this->should_force_crawl;
+    }
+
+    public function setShouldForceCrawl(?bool $should_force_crawl): self
+    {
+        $this->should_force_crawl = $should_force_crawl;
 
         return $this;
     }
