@@ -181,9 +181,10 @@ class Crawler
      *
      * @param string $linkedPage
      * @param array $linkElement
-     * @param string $title
+     * @param string $html
+     * @param string|null $title
      */
-    private function addToPages(string $linkedPage, array $linkElement, string $title = null)
+    private function addToPages(string $linkedPage, array $linkElement, string $html, string $title = null)
     {
         $this->pages[$linkedPage] = [
             'href' => $linkedPage,
@@ -191,6 +192,7 @@ class Crawler
             'text' => $linkElement[2],
             'title' => $title,
             'status' => null,
+            'html' => $html
         ];
     }
 
@@ -296,6 +298,7 @@ class Crawler
                 else {
                     $this->addToPages($linkedPage,
                         $domElement,
+                        $html,
                         isset($title[0]) ? $title[0]: null
                     );
 
@@ -338,6 +341,7 @@ class Crawler
             $page->setPath($uri);
             $page->setStatusCode($pageData['status'] ?? null);
             $page->setTitle($pageData['title'] ?? '');
+            $page->setHtml($pageData['html'] ?? null);
 
             $this->entityManager->persist($page);
         }

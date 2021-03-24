@@ -97,6 +97,16 @@ class JobController extends AbstractController
             'objects' => []
         ];
 
+        // Add the pages (without the inner HTML in order not to fill the browser memory).
+        $jobPages = $job->getPages();
+        foreach($jobPages as $page){
+            $responseArray['pages'][] = [
+                'title' => $page->getTitle(),
+                'path' => $page->getPath(),
+                'statusCode' => $page->getStatusCode()
+            ];
+        }
+
         // Add the objects found for that job.
         $jobObjects = $job->getDoms();
         foreach ($jobObjects as $jobObject){

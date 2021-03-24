@@ -46,6 +46,11 @@ class Page
      */
     private $path;
 
+    /**
+     * @ORM\Column(type="text", nullable=true)
+     */
+    private $html;
+
     public function __construct()
     {
         $this->link = new ArrayCollection();
@@ -129,6 +134,18 @@ class Page
     public function setPath(string $path): self
     {
         $this->path = $path;
+
+        return $this;
+    }
+
+    public function getHtml(): ?string
+    {
+        return $this->html;
+    }
+
+    public function setHtml(?string $html): self
+    {
+        $this->html = $html;
 
         return $this;
     }
