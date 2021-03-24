@@ -109,6 +109,12 @@ class Crawler
         return false;
     }
 
+    /**
+     * Checks if the item found is a file to be saved by comparing it to a preset list of file extensions.
+     *
+     * @param string $path
+     * @return bool
+     */
     private function isFileLink(string $path) : bool
     {
         foreach($this->filteredLinkSuffixes as $suffix){
@@ -120,6 +126,12 @@ class Crawler
         return false;
     }
 
+    /**
+     * Returns the file extension from a file name or a file path.
+     *
+     * @param string $path
+     * @return string
+     */
     private function getFileExtension(string $path) : string
     {
         return substr($path, strrpos($path ,'.'));
@@ -141,12 +153,20 @@ class Crawler
 //        }
 //    }
 
-    private function addToPages(string $linkedPage, array $linkElement)
+    /**
+     * Adds a single page data to the array of pages to be saved at the end of the crawl.
+     *
+     * @param string $linkedPage
+     * @param array $linkElement
+     * @param string $title
+     */
+    private function addToPages(string $linkedPage, array $linkElement, string $title = null)
     {
         $this->pages[$linkedPage] = [
             'href' => $linkedPage,
             'alt' => $linkElement[1],
             'text' => $linkElement[2],
+            'title' => $title,
             'status' => null,
         ];
     }
@@ -214,6 +234,12 @@ class Crawler
 
         // Create a crawler instance to check for links.
         $crawler = new DomCrawler($html);
+
+        $title = $crawler
+            ->filterXPath('//head/title')
+            ->extract(array('_text'));
+
+        // Get the links.
         $links = $crawler
             ->filterXpath('//a')
             ->extract(array('href', 'alt', '_text'));
@@ -223,15 +249,18 @@ class Crawler
 
             $linkedPage = UriResolver::resolve($this->cleanWebPath($domElement[0]), $webPage);
 
-            // If it's not a duplicated link.
+            // If this page hasn't been crawled yet (case where it's linked to from multiple pages).
             if(!$this->isCrawled($linkedPage)) {
                 // Check if this is an outside link.
                 if ($this->isOutgoingLink($linkedPage)) {
                     // Todo: Create outgoing links handler.
-                } // Check if this is a utility link.
+                }
+                // Check if this is a utility link.
                 else if ($this->isUtilityLink($linkedPage)) {
                     // Utility-link behavior.
-                } else if ($this->isFileLink($linkedPage)) {
+                }
+                // Check if this is a file link.
+                else if ($this->isFileLink($linkedPage)) {
                     $fileName = basename($linkedPage);
                     $this->fileLinks[$fileName] = [
                         'type' => 'file',
@@ -240,9 +269,13 @@ class Crawler
                         'fileName' => $fileName,
                         'fileType' => $this->getFileExtension($linkedPage)
                     ];
-                } // Save the page if it hasn't been saved already.
+                }
+                // Save the page if it hasn't been saved already.
                 else {
-                    $this->addToPages($linkedPage, $domElement);
+                    $this->addToPages($linkedPage,
+                        $domElement,
+                        isset($title[0]) ? $title[0] : null
+                    );
 
                     if($recurse) {
                         $this->getPages($linkedPage, true, $webPage);
@@ -268,11 +301,13 @@ class Crawler
                 'fileType' => $this->getFileExtension($src),
             ];
         }
-
-//        $this->savePages($this->pages);
-//        return $this->pages;
     }
 
+    /**
+     * Saves the site's pages.
+     *
+     * @param array $pages
+     */
     private function savePages(array $pages)
     {
         foreach($pages as $uri => $pageData){
@@ -280,7 +315,7 @@ class Crawler
             $page->setJob($this->job);
             $page->setPath($uri);
             $page->setStatusCode($pageData['status']);
-            $page->setTitle('Ergonomic and stylish!');
+            $page->setTitle(isset($pageData['title']) ? $pageData['title'] : '');
 
             $this->entityManager->persist($page);
         }
@@ -288,6 +323,11 @@ class Crawler
         $this->entityManager->flush();
     }
 
+    /**
+     * Save the objects found during the crawl (files and images).
+     *
+     * @param array $fileLinks
+     */
     private function saveFileLinks(array $fileLinks)
     {
         foreach($fileLinks as $fileLink){
