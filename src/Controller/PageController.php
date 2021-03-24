@@ -8,6 +8,7 @@ use App\Form\PageType;
 use App\Message\NewJobMessage;
 use App\Repository\PageRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DomCrawler\Crawler as DomCrawler;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -15,40 +16,11 @@ use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Annotation\Route;
 
 use App\Service\Crawler;
-
+use Symfony\Component\HttpClient\HttpClient;
 
 #[Route('/page')]
 class PageController extends AbstractController
 {
-    #[Route('/generatetree', name: 'generate_tree')]
-    public function generateSiteTree(MessageBusInterface $bus)
-    {
-        $site = 'https://adashofluster.com/';
-
-        $normalizer = new \URL\Normalizer(trim($site));
-        $site = $normalizer->normalize();
-
-        // Save the job description to the db.
-        $entityManager = $this->getDoctrine()->getManager();
-        $job = new Job();
-        $job->setSite($site)
-            ->setDateStarted(new \DateTime())
-            ->setStatus('running');
-        $entityManager->persist($job);
-        $entityManager->flush();
-
-        // Dispatch a message.
-        $bus->dispatch(
-            new NewJobMessage(
-                $job->getId(),
-                $this->getParameter('app.filtered_link_prefixes'),
-                $this->getParameter('app.filtered_link_suffixes')
-            )
-        );
-
-        return new JsonResponse(["jobId" => $job->getId()]);
-    }
-
     #[Route('/', name: 'page_index', methods: ['GET'])]
     public function index(PageRepository $pageRepository): Response
     {

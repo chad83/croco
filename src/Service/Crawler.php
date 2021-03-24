@@ -314,8 +314,8 @@ class Crawler
             $page = new Page();
             $page->setJob($this->job);
             $page->setPath($uri);
-            $page->setStatusCode($pageData['status']);
-            $page->setTitle(isset($pageData['title']) ? $pageData['title'] : '');
+            $page->setStatusCode($pageData['status'] ?? null);
+            $page->setTitle($pageData['title'] ?? '');
 
             $this->entityManager->persist($page);
         }
@@ -345,10 +345,26 @@ class Crawler
         $this->entityManager->flush();
     }
 
+    private function updateJobStatus(string $status)
+    {
+        // Update the job status.
+        $this->job
+            ->setStatus($status)
+            ->setDateFinished(new \DateTime());
+        $this->entityManager->persist($this->job);
+        $this->entityManager->flush();
+    }
+
     public function crawl()
     {
+        // Update the job status: running.
+        $this->updateJobStatus('running');
+
         $this->getPages($this->siteRoot, true);
         $this->savePages($this->pages);
         $this->saveFileLinks($this->fileLinks);
+
+        // Update the job status: done.
+        $this->updateJobStatus('finished');
     }
 }

@@ -3,17 +3,60 @@
 namespace App\Controller;
 
 use App\Entity\Job;
-use App\Form\JobType;
+use App\Message\NewJobMessage;
 use App\Repository\JobRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Annotation\Route;
 
-#[Route('/job')]
+#[Route('/')]
 class JobController extends AbstractController
 {
+
+    /**
+     * Adds a new job to the queue.
+     *
+     * @param MessageBusInterface $bus
+     * @param Request $request
+     * @return JsonResponse
+     */
+    #[Route('/run', name: 'api_job_run', methods: ['POST'])]
+    public function runJob(MessageBusInterface $bus, Request $request): JsonResponse
+    {
+        $jsonRequest = $request->getContent();
+        $args = json_decode($jsonRequest, true);
+
+        if(!isset($args['site']) || empty($args['site'])){
+            return new JsonResponse(['message' => 'Site can\'t be empty'], 400);
+        }
+
+        $site = $args['site'];
+
+        $normalizer = new \URL\Normalizer(trim($site));
+        $site = $normalizer->normalize();
+
+        // Save the job description to the db.
+        $entityManager = $this->getDoctrine()->getManager();
+        $job = new Job();
+        $job->setSite($site)
+            ->setDateStarted(new \DateTime())
+            ->setStatus('pending');
+        $entityManager->persist($job);
+        $entityManager->flush();
+
+        // Dispatch a message.
+        $bus->dispatch(
+            new NewJobMessage(
+                $job->getId(),
+                $this->getParameter('app.filtered_link_prefixes'),
+                $this->getParameter('app.filtered_link_suffixes')
+            )
+        );
+
+        return new JsonResponse(["jobId" => $job->getId()]);
+    }
 
     /**
      * Fetches a job and its objects.
@@ -21,7 +64,8 @@ class JobController extends AbstractController
      * @param $id
      * @param JobRepository $jobRepository
      */
-    public function getJobResults(int $id, jobRepository $jobRepository): JsonResponse
+    #[Route('/{id}/results', name: 'api_job_results', requirements: ['id' => '\d+'], methods: ['GET'])]
+    public function getJobResults(int $id, JobRepository $jobRepository): JsonResponse
     {
         $job = $jobRepository
             ->find($id);
@@ -63,79 +107,27 @@ class JobController extends AbstractController
         return new JsonResponse($responseArray);
     }
 
-
-//    #[Route('/run', name: 'api_job_new', methods: ['POST'])]
-//    public function newJob(): JsonResponse
-//    {
-//        $request = Request::createFromGlobals();
-//        $test = $request->toArray();
-//        return new JsonResponse([$test['site']]);
-//    }
-
-    #[Route('/', name: 'job_index', methods: ['GET'])]
-    public function index(JobRepository $jobRepository): Response
+    /**
+     * Gets a job status.
+     *
+     * @param int $id
+     * @param JobRepository $jobRepository
+     * @return JsonResponse
+     */
+    #[Route('/{id}/status', name: 'api_job_status', requirements: ['id' => '\d+'], methods: ['GET'])]
+    public function getJobStatus(int $id, JobRepository $jobRepository): JsonResponse
     {
-        return $this->render('job/index.html.twig', [
-            'jobs' => $jobRepository->findAll(),
-        ]);
-    }
+        $job = $jobRepository
+            ->find($id);
 
-    #[Route('/new', name: 'job_new', methods: ['GET', 'POST'])]
-    public function new(Request $request): Response
-    {
-        $job = new Job();
-        $form = $this->createForm(JobType::class, $job);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager = $this->getDoctrine()->getManager();
-            $entityManager->persist($job);
-            $entityManager->flush();
-
-            return $this->redirectToRoute('job_index');
+        // Check if the job exists.
+        if (!$job) {
+            throw $this->createNotFoundException(
+                'No jobs were found for id ' . $id
+            );
         }
 
-        return $this->render('job/new.html.twig', [
-            'job' => $job,
-            'form' => $form->createView(),
-        ]);
+        return new JsonResponse(['status' => $job->getStatus()]);
     }
 
-    #[Route('/{id}', name: 'job_show', methods: ['GET'])]
-    public function show(Job $job): Response
-    {
-        return $this->render('job/show.html.twig', [
-            'job' => $job,
-        ]);
-    }
-
-    #[Route('/{id}/edit', name: 'job_edit', methods: ['GET', 'POST'])]
-    public function edit(Request $request, Job $job): Response
-    {
-        $form = $this->createForm(JobType::class, $job);
-        $form->handleRequest($request);
-
-        if ($form->isSubmitted() && $form->isValid()) {
-            $this->getDoctrine()->getManager()->flush();
-
-            return $this->redirectToRoute('job_index');
-        }
-
-        return $this->render('job/edit.html.twig', [
-            'job' => $job,
-            'form' => $form->createView(),
-        ]);
-    }
-
-    #[Route('/{id}', name: 'job_delete', methods: ['POST'])]
-    public function delete(Request $request, Job $job): Response
-    {
-        if ($this->isCsrfTokenValid('delete'.$job->getId(), $request->request->get('_token'))) {
-            $entityManager = $this->getDoctrine()->getManager();
-            $entityManager->remove($job);
-            $entityManager->flush();
-        }
-
-        return $this->redirectToRoute('job_index');
-    }
 }

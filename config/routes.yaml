@@ -1,10 +1,11 @@
-# Adding a new job.
-#api_job_new:
+#
+#api_job_run:
 #  path: /run
-#  controller: App\Controller\JobController::newJob
+#  controller: App\Controller\JobController::runJob
 #  methods: POST
-
-api_job_default_results:
-  path: /{id}/results
-  controller: App\Controller\JobController::getJobResults
-  methods: GET
+#
+#api_job_default_results:
+#  path: /{id}/results
+#  controller: App\Controller\JobController::getJobResults
+#  methods: GET
+#
