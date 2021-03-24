@@ -51,7 +51,8 @@ class JobController extends AbstractController
             new NewJobMessage(
                 $job->getId(),
                 $this->getParameter('app.filtered_link_prefixes'),
-                $this->getParameter('app.filtered_link_suffixes')
+                $this->getParameter('app.filtered_link_suffixes'),
+                $this->getParameter('kernel.project_dir') . $this->getParameter('app.crawler_cache_path')
             )
         );
 
@@ -63,6 +64,7 @@ class JobController extends AbstractController
      *
      * @param $id
      * @param JobRepository $jobRepository
+     * @return JsonResponse
      */
     #[Route('/{id}/results', name: 'api_job_results', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function getJobResults(int $id, JobRepository $jobRepository): JsonResponse

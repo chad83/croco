@@ -5,18 +5,11 @@ namespace App\Controller;
 use App\Entity\Job;
 use App\Entity\Page;
 use App\Form\PageType;
-use App\Message\NewJobMessage;
 use App\Repository\PageRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\DomCrawler\Crawler as DomCrawler;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Annotation\Route;
-
-use App\Service\Crawler;
-use Symfony\Component\HttpClient\HttpClient;
 
 #[Route('/page')]
 class PageController extends AbstractController

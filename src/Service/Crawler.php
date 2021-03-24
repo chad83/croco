@@ -15,6 +15,9 @@ use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use App\Entity\Page;
 
+use Symfony\Component\HttpClient\CachingHttpClient;
+use Symfony\Component\HttpKernel\HttpCache\Store;
+
 class Crawler
 {
     private string $siteRoot;
@@ -25,24 +28,20 @@ class Crawler
 
     private array $filteredLinkPrefixes;
     private array $filteredLinkSuffixes;
-    /**
-     * @var ObjectManager
-     */
     private ObjectManager $entityManager;
-    /**
-     * @var Job
-     */
     private Job $job;
 
-    public function __construct(ObjectManager $entityManager, Job $job, array $filteredLinkPrefixes, array $filteredLinkSuffixes)
+    public function __construct(ObjectManager $entityManager, Job $job, array $filteredLinkPrefixes, array $filteredLinkSuffixes, string $cacheDir)
     {
         $this->siteRoot = $job->getSite();
 
-//        $this->pages[$this->siteRoot] = [];
         $this->pages = [];
         $this->fileLinks = [];
 
+        // Cache settings setup.
+        $store = new Store($cacheDir);
         $this->httpClient = HttpClient::create();
+        $this->httpClient = new CachingHttpClient($this->httpClient, $store);
 
         $this->filteredLinkPrefixes = $filteredLinkPrefixes;
         $this->filteredLinkSuffixes = $filteredLinkSuffixes;
@@ -198,17 +197,16 @@ class Crawler
         return false;
     }
 
+    /**
+     * Main Crawling function. Runs through a page's links then recursively checks each of them.
+     *
+     * @param string $webPage
+     * @param bool $recurse
+     * @param string $parent
+     * @return bool
+     */
     public function getPages(string $webPage, bool $recurse = true, string $parent = '')
     {
-//        $normalizer = new \URL\Normalizer($webPage);
-//        $webPage = $normalizer->normalize();
-
-//        if(empty($parent)) {
-//            $webPage = UriResolver::resolve($webPage, $this->siteRoot);
-//        } else {
-//            $webPage = UriResolver::resolve($webPage, $parent);
-//        }
-
         $webPage = $this->cleanWebPath($webPage);
 
         // Push the current page to the list of pages.
@@ -345,6 +343,11 @@ class Crawler
         $this->entityManager->flush();
     }
 
+    /**
+     * Updates the status of a job in the db.
+     *
+     * @param string $status
+     */
     private function updateJobStatus(string $status)
     {
         // Update the job status.
@@ -355,6 +358,9 @@ class Crawler
         $this->entityManager->flush();
     }
 
+    /**
+     * Crawler wrapper for the messenger.
+     */
     public function crawl()
     {
         // Update the job status: running.

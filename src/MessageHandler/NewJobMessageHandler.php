@@ -41,7 +41,8 @@ final class NewJobMessageHandler implements MessageHandlerInterface
             $this->entityManager,
             $job,
             $message->getFilteredLinkPrefixes(),
-            $message->getFilteredLinkSuffixes()
+            $message->getFilteredLinkSuffixes(),
+            $message->getCrawlerCachePath()
         );
 
         $crawler->crawl();

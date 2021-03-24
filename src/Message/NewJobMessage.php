@@ -7,12 +7,14 @@ final class NewJobMessage
     private int $jobId;
     private array $filteredLinkPrefixes;
     private array $filteredLinkSuffixes;
+    private string $crawlerCachePath;
 
-    public function __construct(int $jobId, array $filteredLinkPrefixes, array $filteredLinkSuffixes)
+    public function __construct(int $jobId, array $filteredLinkPrefixes, array $filteredLinkSuffixes, string $crawlerCachePath)
      {
          $this->jobId = $jobId;
          $this->filteredLinkPrefixes = $filteredLinkPrefixes;
          $this->filteredLinkSuffixes = $filteredLinkSuffixes;
+         $this->crawlerCachePath = $crawlerCachePath;
      }
 
     /**
@@ -37,5 +39,13 @@ final class NewJobMessage
     public function getFilteredLinkSuffixes(): array
     {
         return $this->filteredLinkSuffixes;
+    }
+
+    /**
+     * @return string
+     */
+    public function getCrawlerCachePath(): string
+    {
+        return $this->crawlerCachePath;
     }
 }
