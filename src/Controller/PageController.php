@@ -31,12 +31,13 @@ class PageController extends AbstractController
         // Save the job description to the db.
         $entityManager = $this->getDoctrine()->getManager();
         $job = new Job();
-        $job->setSite($site);
-        $job->setDateStarted(new \DateTime());
-        $job->setStatus('running');
+        $job->setSite($site)
+            ->setDateStarted(new \DateTime())
+            ->setStatus('running');
         $entityManager->persist($job);
         $entityManager->flush();
 
+        // Dispatch a message.
         $bus->dispatch(
             new NewJobMessage(
                 $job->getId(),

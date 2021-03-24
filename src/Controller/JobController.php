@@ -15,13 +15,62 @@ use Symfony\Component\Routing\Annotation\Route;
 class JobController extends AbstractController
 {
 
-//    #[Route('/run', name: 'api_job_new', methods: ['POST'])]
-    public function newJob(): JsonResponse
+    /**
+     * Fetches a job and its objects.
+     *
+     * @param $id
+     * @param JobRepository $jobRepository
+     */
+    public function getJobResults(int $id, jobRepository $jobRepository): JsonResponse
     {
-        $request = Request::createFromGlobals();
-        $test = $request->toArray();
-        return new JsonResponse([$test['site']]);
+        $job = $jobRepository
+            ->find($id);
+
+        // Check if the job exists.
+        if (!$job) {
+            throw $this->createNotFoundException(
+                'No jobs were found for id ' . $id
+            );
+        }
+
+        // todo: create a response for an in-progress job.
+
+        // Create a response with the job description.
+        $responseArray = [
+            'jobId' => $id,
+            'site' => $job->getSite(),
+            'status' => $job->getStatus(),
+            'dateStarted' => $job->getDateStarted(),
+            'dateFinished' => $job->getDateFinished(),
+            'objects' => []
+        ];
+
+        // Add the objects found for that job.
+        $jobObjects = $job->getDoms();
+        foreach ($jobObjects as $jobObject){
+            $responseArray['objects'][] = [
+                'fileName' => $jobObject->getFileName(),
+                'type' => $jobObject->getType(),
+                'fileType' => $jobObject->getFileType(),
+                'filePath' => $jobObject->getFilePath(),
+                'parentUrl' => $jobObject->getParentUrl(),
+                'fileSize' => $jobObject->getFileSize(),
+                'imagerWidth' => $jobObject->getWidth(),
+                'imageHeight' => $jobObject->getHeight()
+            ];
+        }
+
+        return new JsonResponse($responseArray);
     }
+
+
+//    #[Route('/run', name: 'api_job_new', methods: ['POST'])]
+//    public function newJob(): JsonResponse
+//    {
+//        $request = Request::createFromGlobals();
+//        $test = $request->toArray();
+//        return new JsonResponse([$test['site']]);
+//    }
 
     #[Route('/', name: 'job_index', methods: ['GET'])]
     public function index(JobRepository $jobRepository): Response
